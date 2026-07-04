@@ -31,3 +31,4 @@ docs
 
 # Claude agent worktrees
 .claude/worktrees/
+firebase-service-account.json
