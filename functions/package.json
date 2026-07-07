@@ -1,0 +1,25 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "serve": "npx -y firebase-tools@latest emulators:start --only functions",
+    "shell": "npx -y firebase-tools@latest functions:shell",
+    "start": "npm run shell",
+    "deploy": "npx -y firebase-tools@latest deploy --only functions",
+    "logs": "npx -y firebase-tools@latest functions:log"
+  },
+  "engines": {
+    "node": "24"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1080.0",
+    "@aws-sdk/s3-request-presigner": "^3.1080.0",
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.4.1"
+  },
+  "private": true
+}
