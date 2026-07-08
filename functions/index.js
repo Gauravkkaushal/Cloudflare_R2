@@ -6,6 +6,7 @@ const { onRequest } = require("firebase-functions/https");
 const logger = require("firebase-functions/logger");
 const { GetObjectCommand, PutObjectCommand, S3Client } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { z } = require("zod");
 
 initializeApp();
 setGlobalOptions({ maxInstances: 10 });
@@ -25,8 +26,26 @@ const ALLOWED_TYPES = {
   "video/quicktime": "mov",
 };
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const SIGNED_URL_EXPIRES_IN_SECONDS = 3000;
+const ALLOWED_MIME_TYPES = Object.keys(ALLOWED_TYPES);
+
+const uploadRequestSchema = z.object({
+  fileName: z
+    .string()
+    .trim()
+    .min(1, "fileName is required")
+    .max(200, "fileName must be 200 characters or fewer")
+    .regex(/^[^\\/]+$/, "fileName must not contain path separators"),
+  fileType: z.string().refine((value) => ALLOWED_MIME_TYPES.includes(value), {
+    message: "File type not allowed",
+  }),
+  fileSize: z.coerce
+    .number()
+    .int("fileSize must be an integer")
+    .positive("fileSize must be greater than 0")
+    .max(MAX_FILE_SIZE, "File size exceeds 100MB limit"),
+});
 
 function setCorsHeaders(req, res) {
   const origin = req.get("origin");
@@ -78,6 +97,13 @@ async function verifyFirebaseToken(req) {
   };
 }
 
+function formatValidationErrors(error) {
+  return error.issues.map((issue) => ({
+    field: issue.path.join(".") || "request",
+    message: issue.message,
+  }));
+}
+
 exports.createPresignedUploadUrl = onRequest(async (req, res) => {
   setCorsHeaders(req, res);
 
@@ -102,23 +128,17 @@ exports.createPresignedUploadUrl = onRequest(async (req, res) => {
   }
 
   try {
-    const { fileName, fileType, fileSize } = req.body || {};
-    const numericFileSize = Number(fileSize);
+    const validationResult = uploadRequestSchema.safeParse(req.body || {});
 
-    if (!fileName || !fileType || !Number.isFinite(numericFileSize)) {
-      res.status(400).json({ error: "fileName, fileType, and fileSize are required" });
+    if (!validationResult.success) {
+      res.status(400).json({
+        error: "Invalid upload request",
+        details: formatValidationErrors(validationResult.error),
+      });
       return;
     }
 
-    if (!ALLOWED_TYPES[fileType]) {
-      res.status(400).json({ error: "File type not allowed" });
-      return;
-    }
-
-    if (numericFileSize > MAX_FILE_SIZE) {
-      res.status(400).json({ error: "File size exceeds 100MB limit" });
-      return;
-    }
+    const { fileType } = validationResult.data;
 
     const now = new Date();
     const year = now.getFullYear();
