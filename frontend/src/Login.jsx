@@ -1,18 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useEffectEvent } from "react";
 import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { auth, googleProvider } from "../src/firebase";
+import { auth, googleProvider } from "./firebase";
 
 export default function Login({ onUserChange }) {
     const [user, setUser] = useState(null);
+    const notifyUserChange = useEffectEvent((currentUser) => {
+        onUserChange(currentUser);
+    });
 
     // Listen for auth state changes (stays logged in on refresh)
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
-            onUserChange(currentUser); // pass user up to parent
+            notifyUserChange(currentUser);
         });
         return () => unsubscribe();
-    }, []);
+    }, [notifyUserChange]);
 
     const handleGoogleLogin = async () => {
         try {

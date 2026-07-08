@@ -1,6 +1,6 @@
 const { onRequest } = require("firebase-functions/https");
 
-const { ALLOWED_ORIGINS } = require("../constants/upload.const");
+const { ALLOWED_ORIGINS } = require("../config/runtime.config");
 const loggingService = require("../services/logging.service");
 const { issueUploadUrl } = require("../services/upload.service");
 const { parseAuthProfile } = require("../utils/auth.util");

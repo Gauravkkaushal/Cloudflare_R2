@@ -1,10 +1,12 @@
 const { z } = require("zod");
 
 const {
-  ALLOWED_MIME_TYPES,
-  MAX_FILE_SIZE,
-} = require("../constants/upload.const");
+  ALLOWED_UPLOAD_TYPES,
+  MAX_UPLOAD_BYTES,
+} = require("../config/runtime.config");
 const { AppError } = require("./error.util");
+
+const ALLOWED_MIME_TYPES = Object.keys(ALLOWED_UPLOAD_TYPES);
 
 const uploadRequestSchema = z.object({
   fileName: z
@@ -20,7 +22,7 @@ const uploadRequestSchema = z.object({
     .number()
     .int("fileSize must be an integer")
     .positive("fileSize must be greater than 0")
-    .max(MAX_FILE_SIZE, "File size exceeds 5MB limit"),
+    .max(MAX_UPLOAD_BYTES, `File size exceeds ${MAX_UPLOAD_BYTES} bytes limit`),
 });
 
 function formatValidationErrors(error) {

@@ -1,9 +1,9 @@
-const ALLOWED_ORIGINS = new Set([
+const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:4200",
-]);
+];
 
-const ALLOWED_TYPES = {
+const DEFAULT_ALLOWED_UPLOAD_TYPES = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
@@ -13,16 +13,14 @@ const ALLOWED_TYPES = {
   "video/quicktime": "mov",
 };
 
-const ALLOWED_MIME_TYPES = Object.keys(ALLOWED_TYPES);
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const SIGNED_URL_EXPIRES_IN_SECONDS = 3000;
-const UPLOAD_PATH_PREFIX = "uploads";
+const DEFAULT_MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const DEFAULT_UPLOAD_URL_TTL_SECONDS = 3000;
+const DEFAULT_UPLOAD_PREFIX = "uploads";
 
 module.exports = {
-  ALLOWED_MIME_TYPES,
-  ALLOWED_ORIGINS,
-  ALLOWED_TYPES,
-  MAX_FILE_SIZE,
-  SIGNED_URL_EXPIRES_IN_SECONDS,
-  UPLOAD_PATH_PREFIX,
+  DEFAULT_ALLOWED_ORIGINS,
+  DEFAULT_ALLOWED_UPLOAD_TYPES,
+  DEFAULT_MAX_UPLOAD_BYTES,
+  DEFAULT_UPLOAD_PREFIX,
+  DEFAULT_UPLOAD_URL_TTL_SECONDS,
 };

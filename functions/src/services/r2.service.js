@@ -7,10 +7,10 @@ const {
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const {
-  ALLOWED_TYPES,
-  SIGNED_URL_EXPIRES_IN_SECONDS,
-  UPLOAD_PATH_PREFIX,
-} = require("../constants/upload.const");
+  ALLOWED_UPLOAD_TYPES,
+  UPLOAD_PREFIX,
+  UPLOAD_URL_TTL_SECONDS,
+} = require("../config/runtime.config");
 const { AppError } = require("../utils/error.util");
 
 function getR2Client() {
@@ -52,9 +52,9 @@ function buildObjectKey({ uid, fileType, now = new Date() }) {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
-  const extension = ALLOWED_TYPES[fileType];
+  const extension = ALLOWED_UPLOAD_TYPES[fileType];
 
-  return `${UPLOAD_PATH_PREFIX}/${uid}/${year}/${month}/${day}/${randomUUID()}.${extension}`;
+  return `${UPLOAD_PREFIX}/${uid}/${year}/${month}/${day}/${randomUUID()}.${extension}`;
 }
 
 async function createSignedUploadUrls({ objectKey, fileType }) {
@@ -74,10 +74,10 @@ async function createSignedUploadUrls({ objectKey, fileType }) {
 
   const [uploadUrl, viewUrl] = await Promise.all([
     getSignedUrl(r2Client, uploadCommand, {
-      expiresIn: SIGNED_URL_EXPIRES_IN_SECONDS,
+      expiresIn: UPLOAD_URL_TTL_SECONDS,
     }),
     getSignedUrl(r2Client, viewCommand, {
-      expiresIn: SIGNED_URL_EXPIRES_IN_SECONDS,
+      expiresIn: UPLOAD_URL_TTL_SECONDS,
     }),
   ]);
 

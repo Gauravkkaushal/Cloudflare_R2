@@ -1,14 +1,14 @@
 import { useState } from "react";
 import axios from "axios";
-import { auth } from "../src/firebase"
+import { auth } from "./firebase";
+import {
+    allowedUploadTypes,
+    functionsBaseUrl,
+    maxUploadBytes,
+} from "./config/runtime";
 
-const ALLOWED_TYPES = [
-    "image/jpeg", "image/png", "image/webp", "image/gif",
-    "video/mp4", "video/webm", "video/quicktime"
-];
-const MAX_SIZE = 100 * 1024 * 1024; // 100MB
 const CREATE_PRESIGNED_UPLOAD_URL =
-    "http://127.0.0.1:5001/r2-project-5b86f/us-central1/createPresignedUploadUrl";
+    `${functionsBaseUrl}/createPresignedUploadUrl`;
 
 export default function FileUpload() {
     const [file, setFile] = useState(null);
@@ -24,12 +24,12 @@ export default function FileUpload() {
         if (!selected) return;
 
         // Client-side validation
-        if (!ALLOWED_TYPES.includes(selected.type)) {
+        if (!allowedUploadTypes.includes(selected.type)) {
             setError("Only images (JPG, PNG, WebP, GIF) and videos (MP4, WebM, MOV) are allowed.");
             return;
         }
-        if (selected.size > MAX_SIZE) {
-            setError("File must be under 100MB.");
+        if (selected.size > maxUploadBytes) {
+            setError(`File must be under ${Math.floor(maxUploadBytes / (1024 * 1024))}MB.`);
             return;
         }
 
@@ -110,7 +110,7 @@ export default function FileUpload() {
                 <>
                     <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                        accept={allowedUploadTypes.join(",")}
                         onChange={handleFileChange}
                     />
                     {error && <p style={{ color: "red" }}>{error}</p>}
