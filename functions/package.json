@@ -6,7 +6,8 @@
     "shell": "npx -y firebase-tools@latest functions:shell",
     "start": "npm run shell",
     "deploy": "npx -y firebase-tools@latest deploy --only functions",
-    "logs": "npx -y firebase-tools@latest functions:log"
+    "logs": "npx -y firebase-tools@latest functions:log",
+    "test": "node --test"
   },
   "engines": {
     "node": "24"
