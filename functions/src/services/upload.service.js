@@ -5,6 +5,7 @@ const {
   FINALIZE_RATE_LIMIT_WINDOW_SECONDS,
   UPLOAD_RATE_LIMIT_MAX_REQUESTS,
   UPLOAD_RATE_LIMIT_WINDOW_SECONDS,
+  MAX_UPLOADS_PER_USER,
   UPLOAD_URL_TTL_SECONDS,
 } = require("../config/runtime.config");
 const { UPLOAD_RECORD_STATUS } = require("../constants/upload.const");
@@ -19,6 +20,7 @@ const {
 } = require("./r2.service");
 const {
   createUploadRecord,
+  countUploadedFilesForUser,
   getUploadRecord,
   markUploadFailed,
   markUploadUploaded,
@@ -31,6 +33,25 @@ async function issueUploadUrl({ user, request }) {
     maxRequests: UPLOAD_RATE_LIMIT_MAX_REQUESTS,
     windowSeconds: UPLOAD_RATE_LIMIT_WINDOW_SECONDS,
   });
+
+  const uploadedFileCount = await countUploadedFilesForUser(
+    user.uid,
+    MAX_UPLOADS_PER_USER,
+  );
+
+  if (uploadedFileCount >= MAX_UPLOADS_PER_USER) {
+    throw new AppError(
+      `You can upload a maximum of ${MAX_UPLOADS_PER_USER} files.`,
+      409,
+      "UPLOAD_LIMIT_REACHED",
+      {
+        maxUploads: MAX_UPLOADS_PER_USER,
+      },
+      {
+        appErrorKey: "RESOURCE_EXHAUSTED",
+      },
+    );
+  }
 
   const uploadId = randomUUID();
   const objectKey = buildObjectKeyForUpload({

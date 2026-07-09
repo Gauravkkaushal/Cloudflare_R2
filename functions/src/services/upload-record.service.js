@@ -41,6 +41,16 @@ async function getUploadRecord({ uid, uploadId }) {
   return snapshot.data();
 }
 
+async function countUploadedFilesForUser(uid, maxCount) {
+  const snapshot = await getFirestore()
+    .collection(`users/${uid}/uploads`)
+    .where("status", "==", "uploaded")
+    .limit(maxCount)
+    .get();
+
+  return snapshot.size;
+}
+
 async function markUploadUploaded({ uid, uploadId, verification }) {
   await getUploadDocRef(uid, uploadId).set(
     {
@@ -74,6 +84,7 @@ async function markUploadFailed({ uid, uploadId, reason, verification }) {
 
 module.exports = {
   createUploadRecord,
+  countUploadedFilesForUser,
   getUploadDocRef,
   getUploadRecord,
   markUploadFailed,
