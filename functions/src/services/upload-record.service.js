@@ -1,92 +1,27 @@
 const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 
-const { getBucketName } = require("./r2.service");
+const { UPLOAD_STATUS, MAX_UPLOADS_PER_USER } = require("../constants/upload.const");
 
-function getUploadDocRef(uid, uploadId) {
-  return getFirestore().doc(`users/${uid}/uploads/${uploadId}`);
+async function countUserUploads(uid) {
+  const snap = await getFirestore()
+    .collection(`users/${uid}/uploads`)
+    .where("status", "==", UPLOAD_STATUS.UPLOADED)
+    .limit(MAX_UPLOADS_PER_USER)
+    .get();
+  return snap.size;
 }
 
-async function createUploadRecord({
-  uploadId,
-  uid,
-  objectKey,
-  fileName,
-  fileSize,
-  fileType,
-  status,
-}) {
-  await getUploadDocRef(uid, uploadId).set({
+async function createUploadRecord({ uploadId, uid, objectKey, fileName, fileType, fileSize }) {
+  await getFirestore().doc(`users/${uid}/uploads/${uploadId}`).set({
     uploadId,
-    ownerUid: uid,
-    bucket: getBucketName(),
     objectKey,
-    originalFileName: fileName,
-    expectedFileSizeBytes: fileSize,
-    expectedContentType: fileType,
-    status,
+    originalFileName: fileName.trim(),
+    fileType,
+    fileSizeBytes: fileSize,
+    status: UPLOAD_STATUS.PENDING,
     createdAt: FieldValue.serverTimestamp(),
     uploadedAt: null,
-    failedAt: null,
-    verification: null,
   });
 }
 
-async function getUploadRecord({ uid, uploadId }) {
-  const snapshot = await getUploadDocRef(uid, uploadId).get();
-
-  if (!snapshot.exists) {
-    return null;
-  }
-
-  return snapshot.data();
-}
-
-async function countUploadedFilesForUser(uid, maxCount) {
-  const snapshot = await getFirestore()
-    .collection(`users/${uid}/uploads`)
-    .where("status", "==", "uploaded")
-    .limit(maxCount)
-    .get();
-
-  return snapshot.size;
-}
-
-async function markUploadUploaded({ uid, uploadId, verification }) {
-  await getUploadDocRef(uid, uploadId).set(
-    {
-      status: "uploaded",
-      uploadedAt: FieldValue.serverTimestamp(),
-      failedAt: null,
-      failureReason: FieldValue.delete(),
-      verification: {
-        ...verification,
-        verifiedAt: FieldValue.serverTimestamp(),
-      },
-    },
-    { merge: true },
-  );
-}
-
-async function markUploadFailed({ uid, uploadId, reason, verification }) {
-  await getUploadDocRef(uid, uploadId).set(
-    {
-      status: "failed",
-      failedAt: FieldValue.serverTimestamp(),
-      failureReason: reason,
-      verification: {
-        ...verification,
-        verifiedAt: FieldValue.serverTimestamp(),
-      },
-    },
-    { merge: true },
-  );
-}
-
-module.exports = {
-  createUploadRecord,
-  countUploadedFilesForUser,
-  getUploadDocRef,
-  getUploadRecord,
-  markUploadFailed,
-  markUploadUploaded,
-};
+module.exports = { countUserUploads, createUploadRecord };

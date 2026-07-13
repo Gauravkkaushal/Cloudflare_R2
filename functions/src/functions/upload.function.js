@@ -1,123 +1,44 @@
-const { onRequest } = require("firebase-functions/https");
+const { randomUUID } = require("node:crypto");
 
-const { ALLOWED_ORIGINS } = require("../config/runtime.config");
-const loggingService = require("../services/logging.service");
-const { finalizeUpload, issueUploadUrl } = require("../services/upload.service");
-const { parseAuthProfile } = require("../utils/auth.util");
-const { AppError, sendErrorResponse } = require("../utils/error.util");
-const {
-  validateFinalizeUploadRequest,
-  validateUploadRequest,
-} = require("../utils/validation.util");
+const { onCall } = require("firebase-functions/v2/https");
 
-function setCorsHeaders(req, res) {
-  const origin = req.get("origin");
+const { UPLOAD_URL_TTL_SECONDS, MAX_UPLOADS_PER_USER } = require("../constants/upload.const");
+const { buildObjectKey, createSignedUploadUrl } = require("../services/r2.service");
+const { countUserUploads, createUploadRecord } = require("../services/upload-record.service");
+const { validateUploadRequest } = require("../utils/validation.util");
 
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
-    res.set("Access-Control-Allow-Origin", origin);
-    res.set("Vary", "Origin");
+const getUploadUrl = onCall(async (request) => {
+  if (!request.auth) {
+    return { success: false, error: { code: "UNAUTHENTICATED", message: "Authentication required" } };
   }
 
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.set("Access-Control-Max-Age", "3600");
-}
+  const { uid } = request.auth;
+  const { fileName, fileType, fileSize } = request.data;
 
-function assertOriginAllowed(req) {
-  const origin = req.get("origin");
-
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
-    throw new AppError("Origin is not allowed", 403, "CORS_ORIGIN_DENIED", null, {
-      appErrorKey: "PERMISSION_DENIED",
-    });
+  const validationError = validateUploadRequest({ fileName, fileType, fileSize });
+  if (validationError) {
+    return { success: false, error: { code: "INVALID_REQUEST", message: validationError } };
   }
-}
 
-function createUploadHandler(action) {
-  return onRequest(async (req, res) => {
-    const startedAt = Date.now();
-    setCorsHeaders(req, res);
+  const uploadCount = await countUserUploads(uid);
+  if (uploadCount >= MAX_UPLOADS_PER_USER) {
+    return {
+      success: false,
+      error: { code: "LIMIT_REACHED", message: `Maximum of ${MAX_UPLOADS_PER_USER} uploads allowed` },
+    };
+  }
 
-    try {
-      assertOriginAllowed(req);
-    } catch (error) {
-      sendErrorResponse(res, error, "Request origin is not allowed");
-      return;
-    }
+  const uploadId = randomUUID();
+  const objectKey = buildObjectKey({ uid, fileType, uploadId });
 
-    if (req.method === "OPTIONS") {
-      res.status(204).send("");
-      return;
-    }
+  await createUploadRecord({ uploadId, uid, objectKey, fileName, fileType, fileSize });
 
-    if (req.method !== "POST") {
-      sendErrorResponse(
-        res,
-        new AppError("Method not allowed", 405, "METHOD_NOT_ALLOWED"),
-        "Method not allowed",
-      );
-      return;
-    }
+  const uploadUrl = await createSignedUploadUrl({ objectKey, fileType });
 
-    let user;
-
-    try {
-      user = await parseAuthProfile(req);
-    } catch (error) {
-      loggingService.warn("auth.token_verification_failed", {
-        durationMs: Date.now() - startedAt,
-        error: loggingService.serializeError(error),
-      });
-      sendErrorResponse(res, error, "Invalid or expired token");
-      return;
-    }
-
-    try {
-      const response = await action({ req, user, startedAt });
-      res.status(200).json(response);
-    } catch (error) {
-      const severity = error.statusCode && error.statusCode < 500 ? "warn" : "error";
-
-      loggingService[severity]("upload.request_failed", {
-        uid: user.uid,
-        durationMs: Date.now() - startedAt,
-        error: loggingService.serializeError(error),
-      });
-      sendErrorResponse(res, error, "Upload request failed");
-    }
-  });
-}
-
-const createPresignedUploadUrl = createUploadHandler(async ({ req, user, startedAt }) => {
-  const request = validateUploadRequest(req.body);
-  const response = await issueUploadUrl({ user, request });
-
-  loggingService.info("upload.request_succeeded", {
-    uid: user.uid,
-    uploadId: response.uploadId,
-    durationMs: Date.now() - startedAt,
-    contentType: request.fileType,
-    sizeBytes: request.fileSize,
-  });
-
-  return response;
+  return {
+    success: true,
+    data: { uploadId, objectKey, uploadUrl, expiresInSeconds: UPLOAD_URL_TTL_SECONDS },
+  };
 });
 
-const finalizeUploadRequest = createUploadHandler(async ({ req, user, startedAt }) => {
-  const request = validateFinalizeUploadRequest(req.body);
-  const response = await finalizeUpload({ user, request });
-
-  loggingService.info("upload.finalize_succeeded", {
-    uid: user.uid,
-    uploadId: request.uploadId,
-    durationMs: Date.now() - startedAt,
-  });
-
-  return response;
-});
-
-module.exports = {
-  createPresignedUploadUrl,
-  finalizeUploadRequest,
-  setCorsHeaders,
-};
+module.exports = { getUploadUrl };
