@@ -1,8 +1,9 @@
 const ALLOWED_TYPES = {
-  "image/jpeg": ["jpg", "jpeg"],
-  "image/png":  ["png"],
-  "image/webp": ["webp"],
-  "image/gif":  ["gif"],
+  "image/jpeg":   ["jpg", "jpeg"],
+  "image/png":    ["png"],
+  "image/webp":   ["webp"],
+  "image/gif":    ["gif"],
+  "image/svg+xml": ["svg"],
 };
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB

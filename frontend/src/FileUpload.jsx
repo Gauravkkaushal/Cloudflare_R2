@@ -33,7 +33,7 @@ export default function FileUpload() {
 
     if (!allowedUploadTypes.includes(selected.type)) {
       setError(
-        "Only images (JPG, PNG, WebP, GIF) and videos (MP4, WebM, MOV) are allowed.",
+        "Only images (JPG, PNG, WebP, GIF, SVG) are allowed.",
       );
       return;
     }
@@ -126,7 +126,7 @@ export default function FileUpload() {
 
   return (
     <div style={{ maxWidth: 500, margin: "40px auto", fontFamily: "sans-serif" }}>
-      <h2>Upload Image or Video</h2>
+      <h2>Upload Image</h2>
 
       {status === "idle" && (
         <>
@@ -141,15 +141,11 @@ export default function FileUpload() {
 
       {preview && status === "idle" && (
         <div style={{ marginTop: 16 }}>
-          {preview.type.startsWith("image/") ? (
-            <img
-              src={preview.url}
-              alt="preview"
-              style={{ width: "100%", borderRadius: 8 }}
-            />
-          ) : (
-            <video src={preview.url} controls style={{ width: "100%" }} />
-          )}
+          <img
+            src={preview.url}
+            alt="preview"
+            style={{ width: "100%", borderRadius: 8 }}
+          />
           <br />
           <button onClick={handleUpload} style={{ marginTop: 8 }}>
             Upload to R2
@@ -167,15 +163,11 @@ export default function FileUpload() {
       {status === "success" && uploadedUrl && (
         <div style={{ marginTop: 16 }}>
           <p style={{ color: "green" }}>Upload successful.</p>
-          {file.type.startsWith("image/") ? (
-            <img
-              src={uploadedUrl}
-              alt="uploaded"
-              style={{ width: "100%", borderRadius: 8 }}
-            />
-          ) : (
-            <video src={uploadedUrl} controls style={{ width: "100%" }} />
-          )}
+          <img
+            src={uploadedUrl}
+            alt="uploaded"
+            style={{ width: "100%", borderRadius: 8 }}
+          />
           <br />
           <button onClick={handleReset} style={{ marginTop: 8 }}>
             Upload another file

@@ -51,9 +51,7 @@ export const allowedUploadTypes = getListEnv("VITE_ALLOWED_UPLOAD_TYPES", [
   "image/png",
   "image/webp",
   "image/gif",
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
+  "image/svg+xml",
 ]);
 
 export const maxUploadBytes = getNumberEnv("VITE_MAX_UPLOAD_BYTES", 5 * 1024 * 1024);
