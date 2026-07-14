@@ -24,4 +24,24 @@ async function createUploadRecord({ uploadId, uid, objectKey, fileName, fileType
   });
 }
 
-module.exports = { countUserUploads, createUploadRecord };
+async function markUploadComplete({ uid, uploadId }) {
+  const ref = getFirestore().doc(`users/${uid}/uploads/${uploadId}`);
+  const snap = await ref.get();
+
+  if (!snap.exists) {
+    throw new Error("Upload record not found");
+  }
+
+  if (snap.data().uid !== undefined && snap.data().status === UPLOAD_STATUS.UPLOADED) {
+    return snap.data();
+  }
+
+  await ref.update({
+    status: UPLOAD_STATUS.UPLOADED,
+    uploadedAt: FieldValue.serverTimestamp(),
+  });
+
+  return snap.data();
+}
+
+module.exports = { countUserUploads, createUploadRecord, markUploadComplete };

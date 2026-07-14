@@ -1,20 +1,17 @@
 import { useState } from "react";
+import Loader from "./components/Loader";
 import axios from "axios";
 import { auth } from "./firebase";
-import {
-  allowedUploadTypes,
-  functionsBaseUrl,
-  maxUploadBytes,
-} from "./config/runtime";
+import { allowedUploadTypes, functionsBaseUrl, maxUploadBytes } from "./config/runtime";
 
-const CREATE_PRESIGNED_UPLOAD_URL =
-  `${functionsBaseUrl}/createPresignedUploadUrl`;
-const FINALIZE_UPLOAD_URL = `${functionsBaseUrl}/finalizeUpload`;
+const GET_UPLOAD_URL     = `${functionsBaseUrl}/getUploadUrl`;
+const FINALIZE_UPLOAD    = `${functionsBaseUrl}/finalizeUpload`;
 
-function getServerErrorMessage(error) {
+function getErrorMessage(error) {
   return (
     error?.response?.data?.error?.message ||
     error?.response?.data?.error ||
+    error?.message ||
     "Upload failed. Please try again."
   );
 }
@@ -32,24 +29,18 @@ export default function FileUpload() {
     if (!selected) return;
 
     if (!allowedUploadTypes.includes(selected.type)) {
-      setError(
-        "Only images (JPG, PNG, WebP, GIF, SVG) are allowed.",
-      );
+      setError("Only images (JPEG, SVG) are allowed.");
       return;
     }
 
     if (selected.size > maxUploadBytes) {
-      setError(
-        `File must be under ${Math.floor(maxUploadBytes / (1024 * 1024))}MB.`,
-      );
+      setError(`File must be under ${Math.floor(maxUploadBytes / (1024 * 1024))}MB.`);
       return;
     }
 
     setError("");
     setFile(selected);
-
-    const localUrl = URL.createObjectURL(selected);
-    setPreview({ url: localUrl, type: selected.type });
+    setPreview(URL.createObjectURL(selected));
   };
 
   const handleUpload = async () => {
@@ -65,52 +56,40 @@ export default function FileUpload() {
       setStatus("uploading");
       setProgress(0);
 
+      // Get a fresh ID token to prove identity to the backend
       const idToken = await currentUser.getIdToken();
-      const { data } = await axios.post(
-        CREATE_PRESIGNED_UPLOAD_URL,
-        {
-          fileName: file.name,
-          fileType: file.type,
-          fileSize: file.size,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        },
+      const authHeader = { Authorization: `Bearer ${idToken}` };
+
+      // Step 1 — ask backend for a presigned upload URL
+      const { data: presignedData } = await axios.post(
+        GET_UPLOAD_URL,
+        { fileName: file.name, fileType: file.type, fileSize: file.size },
+        { headers: authHeader },
       );
+      const { uploadId, uploadUrl } = presignedData;
 
-      const { uploadId, uploadUrl } = data;
-
+      // Step 2 — upload file directly to Cloudflare R2 (no auth needed here)
       await axios.put(uploadUrl, file, {
         headers: { "Content-Type": file.type },
-        onUploadProgress: (uploadEvent) => {
-          if (!uploadEvent.total) {
-            return;
+        onUploadProgress: (event) => {
+          if (event.total) {
+            setProgress(Math.round((event.loaded * 100) / event.total));
           }
-
-          setProgress(Math.round((uploadEvent.loaded * 100) / uploadEvent.total));
         },
       });
 
-      const finalizeResponse = await axios.post(
-        FINALIZE_UPLOAD_URL,
+      // Step 3 — tell backend the upload succeeded so it can finalize the record
+      const { data: finalizeData } = await axios.post(
+        FINALIZE_UPLOAD,
         { uploadId },
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        },
+        { headers: authHeader },
       );
 
-      const { objectKey, viewUrl } = finalizeResponse.data;
-      setUploadedUrl(viewUrl);
+      setUploadedUrl(finalizeData.viewUrl);
       setStatus("success");
-
-      console.log("Verified object key:", objectKey);
-    } catch (uploadError) {
-      console.error(uploadError);
-      setError(getServerErrorMessage(uploadError));
+    } catch (err) {
+      console.error(err);
+      setError(getErrorMessage(err));
       setStatus("error");
     }
   };
@@ -141,11 +120,7 @@ export default function FileUpload() {
 
       {preview && status === "idle" && (
         <div style={{ marginTop: 16 }}>
-          <img
-            src={preview.url}
-            alt="preview"
-            style={{ width: "100%", borderRadius: 8 }}
-          />
+          <img src={preview} alt="preview" style={{ width: "100%", borderRadius: 8 }} />
           <br />
           <button onClick={handleUpload} style={{ marginTop: 8 }}>
             Upload to R2
@@ -154,20 +129,13 @@ export default function FileUpload() {
       )}
 
       {status === "uploading" && (
-        <div style={{ marginTop: 16 }}>
-          <p>Uploading... {progress}%</p>
-          <progress value={progress} max={100} style={{ width: "100%" }} />
-        </div>
+        <Loader label="Uploading to R2" progress={progress} />
       )}
 
       {status === "success" && uploadedUrl && (
         <div style={{ marginTop: 16 }}>
           <p style={{ color: "green" }}>Upload successful.</p>
-          <img
-            src={uploadedUrl}
-            alt="uploaded"
-            style={{ width: "100%", borderRadius: 8 }}
-          />
+          <img src={uploadedUrl} alt="uploaded" style={{ width: "100%", borderRadius: 8 }} />
           <br />
           <button onClick={handleReset} style={{ marginTop: 8 }}>
             Upload another file
