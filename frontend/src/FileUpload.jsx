@@ -1,128 +1,18 @@
-import { useEffect, useState } from "react";
-import Loader from "./components/Loader";
 import Attachment from "./components/Attachment";
-import axios from "axios";
-import { httpsCallable } from "firebase/functions";
-import { auth, functions } from "./firebase";
 
-const getUploadUrl = httpsCallable(functions, "getUploadUrl");
-const finalizeUpload = httpsCallable(functions, "finalizeUpload");
-const listUploadedWallpapers = httpsCallable(functions, "listUploadedWallpapers");
-
-function getErrorMessage(error) {
-  return (
-    error?.details?.message ||
-    error?.response?.data?.error?.message ||
-    error?.response?.data?.error ||
-    error?.message ||
-    "Upload failed. Please try again."
-  );
-}
-
-export default function FileUpload() {
-  const [progress, setProgress] = useState(0);
-  const [uploading, setUploading] = useState(false);
-  const [uploaded, setUploaded] = useState(false);
-  const [error, setError] = useState("");
-  const [uploadedUrls, setUploadedUrls] = useState([]);
-  const [loadingGallery, setLoadingGallery] = useState(true);
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadUploadedWallpapers() {
-      try {
-        setLoadingGallery(true);
-        const { data } = await listUploadedWallpapers();
-        if (!cancelled) {
-          setUploadedUrls(data.wallpapers || []);
-          setBackgroundImageUrl(data.wallpapers?.[0]?.imageUrl || "");
-        }
-      } catch (err) {
-        console.error(err);
-        if (!cancelled) {
-          setError(getErrorMessage(err));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingGallery(false);
-        }
-      }
-    }
-
-    loadUploadedWallpapers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const handleUpload = async (validFiles) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setError("Please log in first.");
-      return;
-    }
-
-    try {
-      setError("");
-      setUploading(true);
-      setUploaded(false);
-      setProgress(0);
-
-      const results = [];
-
-      for (let i = 0; i < validFiles.length; i++) {
-        const file = validFiles[i];
-
-        const { data: presignedData } = await getUploadUrl({
-          fileName: file.name,
-          fileType: file.type,
-          fileSize: file.size,
-        });
-        const { uploadId, uploadUrl } = presignedData;
-
-        await axios.put(uploadUrl, file, {
-          headers: { "Content-Type": file.type },
-          onUploadProgress: (event) => {
-            if (event.total) {
-              const filesDoneProgress = (i / validFiles.length) * 100;
-              const currentFileProgress = (event.loaded / event.total) * (100 / validFiles.length);
-              setProgress(Math.round(filesDoneProgress + currentFileProgress));
-            }
-          },
-        });
-
-        const { data: finalizeData } = await finalizeUpload({ uploadId });
-
-        results.push({
-          imageUrl: finalizeData.viewUrl,
-          thumbnailUrl: finalizeData.thumbnailUrl || finalizeData.viewUrl,
-        });
-      }
-
-      setProgress(100);
-      setUploadedUrls((currentUrls) => [...results, ...currentUrls]);
-      setUploaded(true);
-    } catch (err) {
-      console.error(err);
-      setError(getErrorMessage(err));
-    } finally {
-      setUploading(false);
-    }
-  };
+export default function FileUpload({ viewModel, actions }) {
+  const { error, gallery, upload } = viewModel;
 
   return (
     <div style={{ maxWidth: 600, margin: "40px auto", padding: "0 16px" }}>
-      {backgroundImageUrl && (
+      {gallery.backgroundImageUrl && (
         <div
           aria-hidden="true"
           style={{
             position: "fixed",
             inset: 0,
             zIndex: -1,
-            backgroundImage: `linear-gradient(rgba(6, 8, 14, 0.6), rgba(6, 8, 14, 0.78)), url("${backgroundImageUrl}")`,
+            backgroundImage: `linear-gradient(rgba(6, 8, 14, 0.6), rgba(6, 8, 14, 0.78)), url("${gallery.backgroundImageUrl}")`,
             backgroundPosition: "center",
             backgroundSize: "cover",
             backgroundRepeat: "no-repeat",
@@ -131,10 +21,10 @@ export default function FileUpload() {
       )}
 
       <Attachment
-        onUpload={handleUpload}
-        progress={progress}
-        uploading={uploading}
-        uploaded={uploaded}
+        onUpload={actions.uploadFiles}
+        progress={upload.progress}
+        uploading={upload.isUploading}
+        uploaded={upload.isComplete}
       />
 
       {error && (
@@ -151,13 +41,13 @@ export default function FileUpload() {
         </p>
       )}
 
-      {loadingGallery && (
+      {gallery.isLoading && (
         <p style={{ marginTop: 16, textAlign: "center", color: "rgba(255,255,255,0.62)" }}>
           Loading uploaded wallpapers...
         </p>
       )}
 
-      {uploadedUrls.length > 0 && (
+      {gallery.wallpapers.length > 0 && (
         <div
           style={{
             marginTop: 20,
@@ -166,11 +56,11 @@ export default function FileUpload() {
             gap: 12,
           }}
         >
-          {uploadedUrls.map((image, idx) => (
+          {gallery.wallpapers.map((image, idx) => (
             <button
               key={idx}
               type="button"
-              onClick={() => setBackgroundImageUrl(image.imageUrl)}
+              onClick={() => actions.selectBackground(image.imageUrl)}
               style={{
                 padding: 0,
                 border: "none",

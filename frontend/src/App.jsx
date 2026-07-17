@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import './App.css'
-import FileUpload from './FileUpload'
+import { FileUploadContainer } from './features/file-upload'
 import Login from './Login'
 
 function App() {
@@ -9,7 +9,7 @@ function App() {
     <>
       <Login onUserChange={setUser} />
       {user ? (
-        <FileUpload />
+        <FileUploadContainer />
       ) : (
         <p style={{ textAlign: "center" }}>Please sign in to upload files.</p>
       )}
