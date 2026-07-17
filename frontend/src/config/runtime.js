@@ -8,6 +8,11 @@ function getRequiredEnv(name) {
   return value.trim();
 }
 
+function getOptionalEnv(name) {
+  const value = import.meta.env[name];
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
 function getNumberEnv(name, fallback) {
   const value = import.meta.env[name];
 
@@ -43,7 +48,7 @@ export const firebaseConfig = {
   appId: getRequiredEnv("VITE_FIREBASE_APP_ID"),
 };
 
-export const functionsBaseUrl = getRequiredEnv("VITE_FUNCTIONS_BASE_URL")
+export const functionsEmulatorUrl = getOptionalEnv("VITE_FUNCTIONS_BASE_URL")
   .replace(/\/+$/, "");
 
 export const allowedUploadTypes = getListEnv("VITE_ALLOWED_UPLOAD_TYPES", [

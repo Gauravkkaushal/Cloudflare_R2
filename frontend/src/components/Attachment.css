@@ -1,0 +1,352 @@
+/* ────────────────────────────────────────────────────────────
+   Glassmorphism Attachment Component
+   Same design tokens as Loader.css
+   ──────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+
+/* ── Outer wrapper ── */
+.att-wrapper {
+  font-family: "Inter", system-ui, sans-serif;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Glass card base (shared token) ── */
+.att-glass {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.10) inset;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-radius: 20px;
+}
+
+/* ── Drop zone ── */
+.att-dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 24px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s, transform 0.2s;
+  overflow: hidden;
+  outline: none;
+}
+
+.att-dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.att-dropzone:hover,
+.att-dropzone--active {
+  background: linear-gradient(
+    135deg,
+    rgba(129, 140, 248, 0.14) 0%,
+    rgba(167, 139, 250, 0.08) 100%
+  );
+  border-color: rgba(129, 140, 248, 0.5);
+  transform: scale(1.01);
+}
+
+/* Shimmer on hover */
+.att-dropzone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.att-dropzone:hover::before {
+  opacity: 1;
+  animation: shimmer 1.8s infinite linear;
+}
+
+@keyframes shimmer {
+  0%   { background-position: -100% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ── Drop icon ── */
+.att-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.25), rgba(167, 139, 250, 0.15));
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  font-size: 22px;
+  box-shadow: 0 0 16px rgba(129, 140, 248, 0.25);
+}
+
+.att-dropzone-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  letter-spacing: 0.02em;
+}
+
+.att-dropzone-sub {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.01em;
+}
+
+/* ── Image grid ── */
+.att-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+/* ── Individual image card ── */
+.att-item {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  animation: itemIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+@keyframes itemIn {
+  from { opacity: 0; transform: scale(0.88) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+.att-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.att-item:hover img {
+  transform: scale(1.06);
+}
+
+/* ── Remove button ── */
+.att-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(10, 10, 20, 0.72);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.att-remove:hover {
+  background: rgba(239, 68, 68, 0.75);
+  transform: scale(1.15);
+}
+
+/* ── Status badge on each item ── */
+.att-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  border-radius: 8px;
+  padding: 3px 6px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.3;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  text-align: center;
+  word-break: break-word;
+}
+
+.att-badge--ok {
+  background: rgba(34, 197, 94, 0.25);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: rgba(134, 239, 172, 0.95);
+}
+
+.att-badge--err {
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: rgba(252, 165, 165, 0.95);
+}
+
+/* ── File name below image ── */
+.att-name {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+/* ── Summary bar ── */
+.att-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.att-summary strong {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 600;
+}
+
+.att-summary-err {
+  color: rgba(252, 165, 165, 0.85);
+}
+
+/* ── Progress section ── */
+.att-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
+  border-radius: 16px;
+}
+
+.att-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.att-progress-label {
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.att-progress-pct {
+  font-weight: 600;
+  font-size: 0.88rem;
+  background: linear-gradient(90deg, #818cf8, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.att-progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.att-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #818cf8, #a78bfa, #63b3ed);
+  background-size: 200% 100%;
+  transition: width 0.4s ease;
+  animation: progressGlow 2s linear infinite;
+  box-shadow: 0 0 10px rgba(129, 140, 248, 0.55);
+}
+
+@keyframes progressGlow {
+  0%   { background-position: 0%   50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* ── Upload button ── */
+.att-btn {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 14px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 60%, #63b3ed 100%);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(129, 140, 248, 0.4);
+}
+
+.att-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(129, 140, 248, 0.55);
+}
+
+.att-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.att-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Success message ── */
+.att-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: rgba(134, 239, 172, 0.95);
+  font-size: 0.85rem;
+  font-weight: 500;
+  animation: itemIn 0.3s ease forwards;
+}
