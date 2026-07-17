@@ -8,6 +8,7 @@ const { buildObjectKey, createSignedUploadUrl } = require("../services/r2.servic
 const {
   countUserUploads,
   createUploadRecord,
+  getUploadRecord,
   listUploadedRecords,
   markUploadComplete,
 } = require("../services/upload-record.service");
@@ -73,13 +74,18 @@ const finalizeUpload = onCall(async (request) => {
 
   let record;
   try {
-    record = await markUploadComplete({ uid, uploadId });
+    record = await getUploadRecord({ uid, uploadId });
   } catch (err) {
     throw new HttpsError("not-found", err.message);
   }
 
   const viewUrl = getPublicImageUrl({ objectKey: record.objectKey });
   const thumbnailUrl = getThumbnailUrl(viewUrl);
+  try {
+    record = await markUploadComplete({ uid, uploadId, imageUrl: viewUrl, thumbnailUrl });
+  } catch (err) {
+    throw new HttpsError("not-found", err.message);
+  }
 
   return { objectKey: record.objectKey, viewUrl, thumbnailUrl };
 });
@@ -90,12 +96,12 @@ const listUploadedWallpapers = onCall(async (request) => {
 
   return {
     wallpapers: records.map((record) => {
-      const viewUrl = getPublicImageUrl({ objectKey: record.objectKey });
+      const viewUrl = record.imageUrl || getPublicImageUrl({ objectKey: record.objectKey });
       return {
         uploadId: record.uploadId,
         objectKey: record.objectKey,
         imageUrl: viewUrl,
-        thumbnailUrl: getThumbnailUrl(viewUrl),
+        thumbnailUrl: record.thumbnailUrl || getThumbnailUrl(viewUrl),
         originalFileName: record.originalFileName,
       };
     }),

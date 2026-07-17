@@ -26,6 +26,7 @@ export default function FileUpload() {
   const [error, setError] = useState("");
   const [uploadedUrls, setUploadedUrls] = useState([]);
   const [loadingGallery, setLoadingGallery] = useState(true);
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +37,7 @@ export default function FileUpload() {
         const { data } = await listUploadedWallpapers();
         if (!cancelled) {
           setUploadedUrls(data.wallpapers || []);
+          setBackgroundImageUrl(data.wallpapers?.[0]?.imageUrl || "");
         }
       } catch (err) {
         console.error(err);
@@ -113,6 +115,21 @@ export default function FileUpload() {
 
   return (
     <div style={{ maxWidth: 600, margin: "40px auto", padding: "0 16px" }}>
+      {backgroundImageUrl && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: -1,
+            backgroundImage: `linear-gradient(rgba(6, 8, 14, 0.6), rgba(6, 8, 14, 0.78)), url("${backgroundImageUrl}")`,
+            backgroundPosition: "center",
+            backgroundSize: "cover",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+      )}
+
       <Attachment
         onUpload={handleUpload}
         progress={progress}
@@ -150,7 +167,18 @@ export default function FileUpload() {
           }}
         >
           {uploadedUrls.map((image, idx) => (
-            <a key={idx} href={image.imageUrl} target="_blank" rel="noreferrer">
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setBackgroundImageUrl(image.imageUrl)}
+              style={{
+                padding: 0,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                borderRadius: 8,
+              }}
+            >
               <img
                 src={image.thumbnailUrl}
                 alt={`Uploaded ${idx + 1}`}
@@ -163,7 +191,7 @@ export default function FileUpload() {
                   display: "block",
                 }}
               />
-            </a>
+            </button>
           ))}
         </div>
       )}

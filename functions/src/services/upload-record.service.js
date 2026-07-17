@@ -24,7 +24,17 @@ async function createUploadRecord({ uploadId, uid, objectKey, fileName, fileType
   });
 }
 
-async function markUploadComplete({ uid, uploadId }) {
+async function getUploadRecord({ uid, uploadId }) {
+  const snap = await getFirestore().doc(`users/${uid}/uploads/${uploadId}`).get();
+
+  if (!snap.exists) {
+    throw new Error("Upload record not found");
+  }
+
+  return snap.data();
+}
+
+async function markUploadComplete({ uid, uploadId, imageUrl, thumbnailUrl }) {
   const ref = getFirestore().doc(`users/${uid}/uploads/${uploadId}`);
   const snap = await ref.get();
 
@@ -32,16 +42,22 @@ async function markUploadComplete({ uid, uploadId }) {
     throw new Error("Upload record not found");
   }
 
-  if (snap.data().uid !== undefined && snap.data().status === UPLOAD_STATUS.UPLOADED) {
-    return snap.data();
+  const currentRecord = snap.data();
+
+  if (currentRecord.status === UPLOAD_STATUS.UPLOADED && currentRecord.imageUrl && currentRecord.thumbnailUrl) {
+    return currentRecord;
   }
 
-  await ref.update({
+  const updateData = {
     status: UPLOAD_STATUS.UPLOADED,
+    imageUrl,
+    thumbnailUrl,
     uploadedAt: FieldValue.serverTimestamp(),
-  });
+  };
 
-  return snap.data();
+  await ref.update(updateData);
+
+  return { ...currentRecord, ...updateData };
 }
 
 async function listUploadedRecords({ uid }) {
@@ -59,4 +75,10 @@ async function listUploadedRecords({ uid }) {
     });
 }
 
-module.exports = { countUserUploads, createUploadRecord, listUploadedRecords, markUploadComplete };
+module.exports = {
+  countUserUploads,
+  createUploadRecord,
+  getUploadRecord,
+  listUploadedRecords,
+  markUploadComplete,
+};
