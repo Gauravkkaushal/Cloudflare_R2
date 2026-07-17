@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Loader from "./components/Loader";
 import Attachment from "./components/Attachment";
 import axios from "axios";
@@ -7,6 +7,7 @@ import { auth, functions } from "./firebase";
 
 const getUploadUrl = httpsCallable(functions, "getUploadUrl");
 const finalizeUpload = httpsCallable(functions, "finalizeUpload");
+const listUploadedWallpapers = httpsCallable(functions, "listUploadedWallpapers");
 
 function getErrorMessage(error) {
   return (
@@ -24,6 +25,36 @@ export default function FileUpload() {
   const [uploaded, setUploaded] = useState(false);
   const [error, setError] = useState("");
   const [uploadedUrls, setUploadedUrls] = useState([]);
+  const [loadingGallery, setLoadingGallery] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUploadedWallpapers() {
+      try {
+        setLoadingGallery(true);
+        const { data } = await listUploadedWallpapers();
+        if (!cancelled) {
+          setUploadedUrls(data.wallpapers || []);
+        }
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setError(getErrorMessage(err));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingGallery(false);
+        }
+      }
+    }
+
+    loadUploadedWallpapers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleUpload = async (validFiles) => {
     const currentUser = auth.currentUser;
@@ -37,7 +68,6 @@ export default function FileUpload() {
       setUploading(true);
       setUploaded(false);
       setProgress(0);
-      setUploadedUrls([]);
 
       const results = [];
 
@@ -64,11 +94,14 @@ export default function FileUpload() {
 
         const { data: finalizeData } = await finalizeUpload({ uploadId });
 
-        results.push(finalizeData.viewUrl);
+        results.push({
+          imageUrl: finalizeData.viewUrl,
+          thumbnailUrl: finalizeData.thumbnailUrl || finalizeData.viewUrl,
+        });
       }
 
       setProgress(100);
-      setUploadedUrls(results);
+      setUploadedUrls((currentUrls) => [...results, ...currentUrls]);
       setUploaded(true);
     } catch (err) {
       console.error(err);
@@ -101,15 +134,36 @@ export default function FileUpload() {
         </p>
       )}
 
+      {loadingGallery && (
+        <p style={{ marginTop: 16, textAlign: "center", color: "rgba(255,255,255,0.62)" }}>
+          Loading uploaded wallpapers...
+        </p>
+      )}
+
       {uploadedUrls.length > 0 && (
-        <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-          {uploadedUrls.map((url, idx) => (
-            <img
-              key={idx}
-              src={url}
-              alt={`Uploaded ${idx + 1}`}
-              style={{ width: "100%", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}
-            />
+        <div
+          style={{
+            marginTop: 20,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+            gap: 12,
+          }}
+        >
+          {uploadedUrls.map((image, idx) => (
+            <a key={idx} href={image.imageUrl} target="_blank" rel="noreferrer">
+              <img
+                src={image.thumbnailUrl}
+                alt={`Uploaded ${idx + 1}`}
+                style={{
+                  width: "100%",
+                  height: 96,
+                  objectFit: "cover",
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  display: "block",
+                }}
+              />
+            </a>
           ))}
         </div>
       )}

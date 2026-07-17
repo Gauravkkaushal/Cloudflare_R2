@@ -44,4 +44,19 @@ async function markUploadComplete({ uid, uploadId }) {
   return snap.data();
 }
 
-module.exports = { countUserUploads, createUploadRecord, markUploadComplete };
+async function listUploadedRecords({ uid }) {
+  const snap = await getFirestore()
+    .collection(`users/${uid}/uploads`)
+    .where("status", "==", UPLOAD_STATUS.UPLOADED)
+    .get();
+
+  return snap.docs
+    .map((doc) => doc.data())
+    .sort((a, b) => {
+      const bUploadedAt = b.uploadedAt?.toMillis?.() || 0;
+      const aUploadedAt = a.uploadedAt?.toMillis?.() || 0;
+      return bUploadedAt - aUploadedAt;
+    });
+}
+
+module.exports = { countUserUploads, createUploadRecord, listUploadedRecords, markUploadComplete };

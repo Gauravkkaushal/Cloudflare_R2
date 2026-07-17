@@ -6,13 +6,7 @@ const { ALLOWED_TYPES, UPLOAD_PREFIX, UPLOAD_URL_TTL_SECONDS } = require("../con
 
 function buildObjectKey({ uid, fileType, uploadId }) {
   const ext = ALLOWED_TYPES[fileType][0];
-  const now = new Date();
-  const datePath = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("/");
-  return `${UPLOAD_PREFIX}/${uid}/${datePath}/${uploadId}.${ext}`;
+  return `${uid}/${uploadId}.${ext}`;
 }
 
 async function createSignedUploadUrl({ objectKey, fileType }) {
